@@ -1,7 +1,7 @@
 import bpy
 import math
 
-# 1. Limpieza de escena
+# 1. Limpieza
 for obj in list(bpy.data.objects):
     bpy.data.objects.remove(obj, do_unlink=True)
 for mesh in list(bpy.data.meshes):
@@ -9,12 +9,11 @@ for mesh in list(bpy.data.meshes):
 
 scene = bpy.context.scene
 
-# 2. Configuración CYCLES + ACELERACIÓN GPU OPTIX
+# 2. CYCLES + OPTIX TURBO
 scene.render.engine = 'CYCLES'
 prefs = bpy.context.preferences
 cprefs = prefs.addons['cycles'].preferences
 
-# Activar dispositivos CUDA / OptiX
 cprefs.get_devices()
 try:
     cprefs.compute_device_type = 'CUDA'
@@ -25,19 +24,19 @@ for device in cprefs.devices:
     device.use = True
 
 scene.cycles.device = 'GPU'
-scene.cycles.samples = 16
-scene.cycles.max_bounces = 2
-
-# FORZAR DENOISE POR HARDWARE (GPU OptiX)
+scene.cycles.samples = 8               # MÁXIMA VELOCIDAD
+scene.cycles.max_bounces = 1          # Mínimos rebotes de luz
+scene.cycles.use_light_tree = False   # Desactivar cálculo pesado de luces
 scene.cycles.use_denoiser = True
+
 try:
     scene.cycles.denoiser = 'OPTIX'
 except Exception:
     scene.cycles.denoiser = 'OPENIMAGEDENOISE'
 
-# Formato Vertical 9:16
-scene.render.resolution_x = 1080
-scene.render.resolution_y = 1920
+# RESOLUCIÓN OPTIMIZADA (Renderiza a 720x1280 para velocidad extrema)
+scene.render.resolution_x = 720
+scene.render.resolution_y = 1280
 scene.render.fps = 30
 
 # 3. Cámara
@@ -71,7 +70,7 @@ obj_piso = bpy.data.objects.new("Piso", mesh_piso)
 obj_piso.data.materials.append(mat_piso)
 scene.collection.objects.link(obj_piso)
 
-# 6. Objeto Central de Prueba
+# 6. Objeto Central
 mesh_cubo = bpy.data.meshes.new("CuboMesh")
 v = [(-1,-1,0),(1,-1,0),(1,1,0),(-1,1,0),(-1,-1,2),(1,-1,2),(1,1,2),(-1,1,2)]
 f = [(0,1,2,3),(4,5,6,7),(0,4,5,1),(1,5,6,2),(2,6,7,3),(3,7,4,0)]
