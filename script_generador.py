@@ -25,7 +25,10 @@ with open('datos_vertical.json') as f:
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
 scene = bpy.context.scene
-scene.render.engine = 'BLENDER_EEVEE_NEXT'
+scene.render.engine = 'CYCLES'
+scene.cycles.device = 'CPU'
+scene.cycles.samples = 16
+
 scene.render.resolution_x = 1080
 scene.render.resolution_y = 1920
 scene.render.fps = 30
@@ -90,4 +93,4 @@ if cam.animation_data and cam.animation_data.action:
 with open("generar_vertical.py", "w") as f:
     f.write(blender_code)
 
-print("✅ Script generador actualizado correctamente.")
+print("✅ Script generador actualizado correctamente para servidor.")
