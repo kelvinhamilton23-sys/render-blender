@@ -9,27 +9,31 @@ for mesh in list(bpy.data.meshes):
 
 scene = bpy.context.scene
 
-# 2. Configuración CYCLES + ACELERACIÓN GPU CUDA
+# 2. Configuración CYCLES + ACELERACIÓN GPU OPTIX
 scene.render.engine = 'CYCLES'
 prefs = bpy.context.preferences
 cprefs = prefs.addons['cycles'].preferences
 
-# Forzar detección y activación de GPU CUDA
+# Activar dispositivos CUDA / OptiX
 cprefs.get_devices()
-for device_type in ['CUDA', 'OPTIX']:
-    try:
-        cprefs.compute_device_type = device_type
-        break
-    except Exception:
-        pass
+try:
+    cprefs.compute_device_type = 'CUDA'
+except Exception:
+    pass
 
 for device in cprefs.devices:
     device.use = True
 
 scene.cycles.device = 'GPU'
-scene.cycles.samples = 32
-scene.cycles.use_denoiser = True
+scene.cycles.samples = 16
 scene.cycles.max_bounces = 2
+
+# FORZAR DENOISE POR HARDWARE (GPU OptiX)
+scene.cycles.use_denoiser = True
+try:
+    scene.cycles.denoiser = 'OPTIX'
+except Exception:
+    scene.cycles.denoiser = 'OPENIMAGEDENOISE'
 
 # Formato Vertical 9:16
 scene.render.resolution_x = 1080
@@ -51,7 +55,7 @@ luz_obj = bpy.data.objects.new("LuzPrincipal", luz_data)
 scene.collection.objects.link(luz_obj)
 luz_obj.location = (2, -3, 5)
 
-# 5. Piso Reflectante
+# 5. Piso Reflectante (Dark Noir)
 mat_piso = bpy.data.materials.new(name="MaterialPiso")
 mat_piso.use_nodes = True
 bsdf = mat_piso.node_tree.nodes.get('Principled BSDF')
@@ -67,7 +71,7 @@ obj_piso = bpy.data.objects.new("Piso", mesh_piso)
 obj_piso.data.materials.append(mat_piso)
 scene.collection.objects.link(obj_piso)
 
-# 6. Cubo de Prueba
+# 6. Objeto Central de Prueba
 mesh_cubo = bpy.data.meshes.new("CuboMesh")
 v = [(-1,-1,0),(1,-1,0),(1,1,0),(-1,1,0),(-1,-1,2),(1,-1,2),(1,1,2),(-1,1,2)]
 f = [(0,1,2,3),(4,5,6,7),(0,4,5,1),(1,5,6,2),(2,6,7,3),(3,7,4,0)]
