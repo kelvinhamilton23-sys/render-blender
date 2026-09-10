@@ -9,16 +9,39 @@ for mesh in list(bpy.data.meshes):
 
 scene = bpy.context.scene
 
-# 2. MOTOR EEVEE NEXT (Rasterización pura en GPU para máxima velocidad)
-scene.render.engine = 'BLENDER_EEVEE_NEXT'
+# 2. CYCLES ULTRA-LIGERO (Velocidad extrema sin bloqueos)
+scene.render.engine = 'CYCLES'
 
-# Configuraciones de rendimiento extremo
-scene.eevee.taa_render_samples = 8
-scene.eevee.use_raytracing = False
+prefs = bpy.context.preferences
+cprefs = prefs.addons['cycles'].preferences
+cprefs.get_devices()
 
-# Resolución nativa Full HD 9:16 (Ya no necesitamos reescalar porque Eevee vuela)
-scene.render.resolution_x = 1080
-scene.render.resolution_y = 1920
+try:
+    cprefs.compute_device_type = 'OPTIX'
+except Exception:
+    try:
+        cprefs.compute_device_type = 'CUDA'
+    except Exception:
+        pass
+
+for device in cprefs.devices:
+    if device.type in {'CUDA', 'OPTIX', 'HIP', 'METAL'}:
+        device.use = True
+
+scene.cycles.device = 'GPU'
+scene.cycles.samples = 4               # Mínimo absoluto para velocidad tope
+scene.cycles.max_bounces = 0          # Cero rebotes (sin cálculo de luz compleja)
+scene.cycles.use_light_tree = False
+scene.cycles.use_denoiser = True
+
+try:
+    scene.cycles.denoiser = 'OPTIX'
+except Exception:
+    scene.cycles.denoiser = 'OPENIMAGEDENOISE'
+
+# Resolución ligera (Renderiza a 720p y FFmpeg lo escala a 1080p sin perder calidad visual)
+scene.render.resolution_x = 720
+scene.render.resolution_y = 1280
 scene.render.fps = 30
 
 # 3. Cámara
@@ -29,21 +52,20 @@ scene.camera = cam_obj
 cam_obj.location = (0, -8.5, 1.8)
 cam_obj.rotation_euler = (math.radians(80), 0, 0)
 
-# 4. Luz
-luz_data = bpy.data.lights.new(name="LuzPrincipal", type='AREA')
-luz_data.energy = 1500
+# 4. Luz Directa
+luz_data = bpy.data.lights.new(name="LuzPrincipal", type='POINT')
+luz_data.energy = 2000
 luz_obj = bpy.data.objects.new("LuzPrincipal", luz_data)
 scene.collection.objects.link(luz_obj)
-luz_obj.location = (2, -3, 5)
+luz_obj.location = (0, -3, 4)
 
-# 5. Piso Reflectante (Dark Noir optimizado para Eevee)
+# 5. Piso Dark Noir simplificado
 mat_piso = bpy.data.materials.new(name="MaterialPiso")
 mat_piso.use_nodes = True
 bsdf = mat_piso.node_tree.nodes.get('Principled BSDF')
 if bsdf:
     bsdf.inputs['Base Color'].default_value = (0.02, 0.02, 0.02, 1.0)
-    bsdf.inputs['Roughness'].default_value = 0.1
-    bsdf.inputs['Metallic'].default_value = 0.9
+    bsdf.inputs['Roughness'].default_value = 0.2
 
 mesh_piso = bpy.data.meshes.new("PisoMesh")
 mesh_piso.from_pydata([(-10,-10,0), (10,-10,0), (10,10,0), (-10,10,0)], [], [(0,1,2,3)])
